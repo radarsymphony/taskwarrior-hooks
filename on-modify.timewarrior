@@ -49,28 +49,41 @@ old = json.loads(input_stream.readline().decode("utf-8", errors="replace"))
 new = json.loads(input_stream.readline().decode("utf-8", errors="replace"))
 print(json.dumps(new))
 
+# Extract task description for use as annotation.
+def extract_description_from(json_obj):
+
+    description = json_obj['description']
+
+    return description
+
+# Extract annotation, projects, and tags from taskwarrior to be used as tags in timewarrior
+# def extract_annotation_from(json_obj):
+    
+#     if 'annotations' not in json_obj:
+#         # return '\'\''
+#         annotation = 'NOTAGS'
+    
+#     else:
+#         annotation = json_obj['annotations'][0]['description']
+
+#     return annotation.split()
 
 def extract_tags_from(json_obj):
-    # Extract attributes for use as tags.
-    tags = [json_obj['description']]
-
+    
+    tags = []
+    
     if 'project' in json_obj:
         tags.append(json_obj['project'])
 
     if 'tags' in json_obj:
         tags.extend(json_obj['tags'])
-
+    
+    if not tags:
+        tags = ['NOTAGS']
+            
     return tags
 
-
-def extract_annotation_from(json_obj):
-
-    if 'annotations' not in json_obj:
-        return '\'\''
-
-    return json_obj['annotations'][0]['description']
-
-
+## On-modify Section
 start_or_stop = ''
 
 # Started task.
@@ -81,22 +94,29 @@ if 'start' in new and 'start' not in old:
 elif ('start' not in new or 'end' in new) and 'start' in old:
     start_or_stop = 'stop'
 
+# START/STOP
 if start_or_stop:
     tags = extract_tags_from(new)
+    annotation = extract_description_from(new)
 
     subprocess.call(['timew', start_or_stop] + tags + [':yes'])
+    subprocess.call(['timew', 'annotate', '@1', annotation])
 
 # Modifications to task other than start/stop
 elif 'start' in new and 'start' in old:
     old_tags = extract_tags_from(old)
     new_tags = extract_tags_from(new)
-
+    old_annotation = extract_description_from(old)
+    new_annotation = extract_description_from(new)
+    
     if old_tags != new_tags:
+        
+        for old_item in old_tags:
+            if old_item in new_tags:
+                old_tags.remove(old_item)
+            
         subprocess.call(['timew', 'untag', '@1'] + old_tags + [':yes'])
         subprocess.call(['timew', 'tag', '@1'] + new_tags + [':yes'])
-
-    old_annotation = extract_annotation_from(old)
-    new_annotation = extract_annotation_from(new)
 
     if old_annotation != new_annotation:
         subprocess.call(['timew', 'annotate', '@1', new_annotation])
