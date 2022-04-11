@@ -114,6 +114,7 @@ elif 'start' in new and 'start' in old:
         for old_item in old_tags:
             if old_item in new_tags:
                 old_tags.remove(old_item)
+                # new_tags.remove(old_item) # If item was in old tags and is in new tags, we can ignore it too
             
         subprocess.call(['timew', 'untag', '@1'] + old_tags + [':yes'])
         subprocess.call(['timew', 'tag', '@1'] + new_tags + [':yes'])
